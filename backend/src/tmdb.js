@@ -20,7 +20,7 @@ export async function enrich(cartelera, token) {
   const genres = Object.fromEntries((await tmdb("/genre/movie/list?language=es", token)).genres.map((g) => [g.id, g.name]));
 
   for (const m of cartelera.movies) {
-    if (!(m.id in cache)) {
+    if (!(m.id in cache) || (overrides[m.id] && cache[m.id]?.tmdbId !== overrides[m.id])) { // las correcciones manuales mandan sobre la caché
       await sleep(250);
       const q = encodeURIComponent(m.title.replace(/\s*\(.*?\)\s*/g, " "));
       const { results } = await tmdb(`/search/movie?query=${q}&language=es-AR&include_adult=false`, token);
@@ -29,7 +29,7 @@ export async function enrich(cartelera, token) {
       const recent = (r) => Number(r.release_date?.slice(0, 4)) >= new Date().getFullYear() - 2; // la cartelera es de estrenos recientes
       const cands = results.filter((r) => recent(r) && [r.title, r.original_title].some((t) => normTitle(t) === want || normTitle(t).startsWith(want) || want.startsWith(normTitle(t))));
       let hit = null;
-      if (overrides[m.id]) hit = (await tmdb(`/movie/${overrides[m.id]}?language=es-AR`, token)) && { ...(await tmdb(`/movie/${overrides[m.id]}?language=es-AR`, token)), genre_ids: [] };
+      if (overrides[m.id]) hit = await tmdb(`/movie/${overrides[m.id]}?language=es-AR`, token); // detalle completo (trae genres)
       else if (m.durationMin) {
         // Verifico por duración (±10 min) para no confundir remakes u homónimas.
         for (const c of cands.slice(0, 4)) {
