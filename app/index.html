@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0f1115">
+  <title>Cartelera Santa Fe y Paraná</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>🎬 Cartelera</h1>
+    <nav id="cities" aria-label="Ciudad"></nav>
+    <nav id="days" aria-label="Día"></nav>
+  </header>
+  <main id="list" aria-live="polite"></main>
+  <footer>
+    <p id="updated"></p>
+    <p>Datos de cartelera de cada cine. Pósters y sinopsis: <a href="https://www.themoviedb.org/">TMDB</a>.
+       Este producto usa la API de TMDB pero no está avalado ni certificado por TMDB.</p>
+  </footer>
+  <section id="detail" hidden role="dialog" aria-modal="true"></section>
+  <script src="app.js" type="module"></script>
+</body>
+</html>

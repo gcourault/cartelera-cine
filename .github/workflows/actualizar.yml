@@ -1,0 +1,62 @@
+name: Actualizar cartelera y publicar
+
+on:
+  schedule:
+    - cron: "0 9 * * *"   # 06:00 Argentina
+    - cron: "0 17 * * *"  # 14:00 Argentina
+  workflow_dispatch:       # también se puede lanzar a mano desde la pestaña Actions
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+env:
+  TZ: America/Argentina/Buenos_Aires
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: Instalar dependencias
+        working-directory: backend
+        run: npm ci
+      - name: Caché de TMDB y reseñas
+        uses: actions/cache@v4
+        with:
+          path: backend/out/*-cache.json
+          key: cache-${{ github.run_id }}
+          restore-keys: cache-
+      - name: Juntar cartelera (usa el Chrome del runner)
+        working-directory: backend
+        env:
+          TMDB_TOKEN: ${{ secrets.TMDB_TOKEN }}
+        run: node src/index.js
+      - name: Verificar resultado
+        run: |
+          test -s backend/out/cartelera.json
+          node -e 'const c=require("./backend/out/cartelera.json"); if(c.showtimes.length<30) {console.error("Muy pocas funciones:",c.showtimes.length); process.exit(1)}; console.log(c.movies.length,"películas",c.showtimes.length,"funciones")'
+      - name: Armar sitio
+        run: cp backend/out/cartelera.json app/cartelera.json
+      - uses: actions/upload-pages-artifact@v3
+        with: { path: app }
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.d.outputs.page_url }}
+    steps:
+      - id: d
+        uses: actions/deploy-pages@v4
