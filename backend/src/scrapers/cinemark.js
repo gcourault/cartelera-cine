@@ -35,22 +35,37 @@ export default async function cinemark() {
     const page = await browser.newPage();
     await page.goto(URL, { waitUntil: "networkidle" });
     await page.waitForSelector("h2", { state: "attached", timeout: 20000 });
-    const slides = await page.$$(".swiper-slide");
     const showtimes = [];
     const seen = new Set();
-    for (const slide of slides) {
-      const label = (await slide.innerText()).replace(/\s+/g, " ").trim(); // "HOY" | "LUN 23/NOV"
-      let date;
-      const m = /(\d{1,2})\/([A-ZÑ]{3})/i.exec(label);
-      if (/^HOY/i.test(label)) date = todayISO();
-      else if (m) date = toISO(m[1], m[2]);
-      else continue;
-      if (seen.has(date)) continue;
-      seen.add(date);
-      await slide.click().catch(() => {});
-      await sleep(1200);
-      const cards = await page.evaluate(EXTRACT);
-      for (const c of cards) for (const s of parseLines(c.lines)) showtimes.push({ title: c.title, date, ...s });
+    // Lee los días de la pestaña activa (CARTELERA o PREVENTA).
+    const readTab = async () => {
+      const n = (await page.$$(".swiper-slide")).length;
+      for (let i = 0; i < n; i++) {
+        const slide = (await page.$$(".swiper-slide"))[i];
+        if (!slide) continue;
+        const label = (await slide.innerText()).replace(/\s+/g, " ").trim(); // "HOY" | "LUN 23/NOV" | "MAR 1/DIC"
+        let date;
+        const m = /(\d{1,2})\/([A-ZÑ]{3})/i.exec(label);
+        if (/^HOY/i.test(label)) date = todayISO();
+        else if (m) date = toISO(m[1], m[2]);
+        else continue;
+        if (seen.has(date)) continue;
+        seen.add(date);
+        await slide.click().catch(() => {});
+        await sleep(1200);
+        for (const c of await page.evaluate(EXTRACT)) {
+          if (/PRIVACIDAD/i.test(c.title)) continue; // aviso de cookies, no es una película
+          for (const s of parseLines(c.lines)) showtimes.push({ title: c.title, date, ...s });
+        }
+      }
+    };
+    await readTab();
+    // Preventa: estrenos de los próximos días (p. ej. los jueves) que no están en la pestaña CARTELERA.
+    const pre = page.locator("text=/^PREVENTA$/i").first();
+    if (await pre.count()) {
+      await pre.click().catch(() => {});
+      await sleep(2000);
+      await readTab();
     }
     return {
       cinema: { id: "cinemark", name: "Cinemark Santa Fe", city: "Santa Fe", address: "Dique 1 Puerto de Santa Fe, Ribera Shopping", url: URL },
