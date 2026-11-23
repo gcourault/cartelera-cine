@@ -32,3 +32,5 @@ footer a { color:var(--acc); }
 .dayrow { margin:6px 0 10px; }
 .dayrow > span { font-size:13px; color:var(--dim); }
 a.link { color:var(--acc); }
+
+#updated.stale { color: #ffb454; font-weight: 600; }

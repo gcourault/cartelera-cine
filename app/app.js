@@ -36,7 +36,11 @@ async function load() {
   const d = state.data;
   d.cinemaById = Object.fromEntries(d.cinemas.map((c) => [c.id, c]));
   d.movieById = Object.fromEntries(d.movies.map((m) => [m.id, m]));
-  $("updated").textContent = "Actualizada: " + new Date(d.generatedAt).toLocaleString("es-AR", { dateStyle: "short", timeStyle: "short" });
+  const gen = new Date(d.generatedAt), horas = (Date.now() - gen) / 36e5;
+  const upd = $("updated");
+  upd.textContent = "Actualizada: " + gen.toLocaleString("es-AR", { dateStyle: "short", timeStyle: "short" });
+  upd.classList.toggle("stale", horas > 20); // se actualiza 2 veces por día: más de 20 h sin cambios es raro
+  if (horas > 20) upd.textContent += ` ⚠ datos de hace ${Math.floor(horas)} h, pueden estar desactualizados`;
   render();
 }
 

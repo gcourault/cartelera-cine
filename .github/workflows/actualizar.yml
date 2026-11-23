@@ -24,6 +24,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    outputs:
+      problemas: ${{ steps.res.outputs.problemas }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -42,6 +44,12 @@ jobs:
         env:
           TMDB_TOKEN: ${{ secrets.TMDB_TOKEN }}
         run: node src/index.js
+      - name: Resumen y problemas por cine
+        id: res
+        if: always()
+        run: |
+          [ -f backend/out/resumen.md ] && cat backend/out/resumen.md >> "$GITHUB_STEP_SUMMARY"
+          echo "problemas=$(cat backend/out/problemas.txt 2>/dev/null)" >> "$GITHUB_OUTPUT"
       - name: Verificar resultado
         run: |
           test -s backend/out/cartelera.json
@@ -60,3 +68,13 @@ jobs:
     steps:
       - id: d
         uses: actions/deploy-pages@v4
+
+  # El sitio se publica igual, pero si un cine falló o vino vacío la corrida queda en rojo (GitHub avisa por mail).
+  avisar:
+    needs: [build, deploy]
+    if: needs.build.outputs.problemas != ''
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "::error::Cines con problemas: ${{ needs.build.outputs.problemas }}"
+          exit 1
