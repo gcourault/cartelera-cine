@@ -55,7 +55,11 @@ jobs:
           test -s backend/out/cartelera.json
           node -e 'const c=require("./backend/out/cartelera.json"); if(c.showtimes.length<30) {console.error("Muy pocas funciones:",c.showtimes.length); process.exit(1)}; console.log(c.movies.length,"películas",c.showtimes.length,"funciones")'
       - name: Armar sitio
-        run: cp backend/out/cartelera.json app/cartelera.json
+        run: |
+          cp backend/out/cartelera.json app/cartelera.json
+          # Versión de caché = commit: cada cambio de la app invalida la caché vieja de los dispositivos
+          sed -i "s/SHELL = \"cartelera-shell-[A-Za-z0-9]*\"/SHELL = \"cartelera-shell-${GITHUB_SHA::7}\"/" app/sw.js
+          grep -q "SHELL = \"cartelera-shell-${GITHUB_SHA::7}\"" app/sw.js
       - uses: actions/upload-pages-artifact@v3
         with: { path: app }
 

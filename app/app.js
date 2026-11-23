@@ -23,7 +23,7 @@ function dayLabel(iso) {
   return `${DAYS[d.getDay()]} ${d.getDate()}`;
 }
 
-const state = { data: null, city: "Todas", day: null };
+const state = { data: null, city: "Todas", cinema: "Todos", day: null };
 
 async function load() {
   try {
@@ -48,13 +48,18 @@ async function load() {
 function upcoming() {
   const now = new Date(), today = localISO(now), hm = now.toTimeString().slice(0, 5);
   const { cinemaById } = state.data;
-  return state.data.showtimes.filter((s) => (s.date > today || (s.date === today && s.time >= hm)) && (state.city === "Todas" || cinemaById[s.cinemaId]?.city === state.city));
+  return state.data.showtimes.filter((s) => (s.date > today || (s.date === today && s.time >= hm)) && (state.city === "Todas" || cinemaById[s.cinemaId]?.city === state.city) && (state.cinema === "Todos" || s.cinemaId === state.cinema));
 }
 
 function render() {
   const d = state.data, shows = upcoming();
   const cities = ["Todas", ...new Set(d.cinemas.map((c) => c.city))];
-  $("cities").replaceChildren(...cities.map((c) => h("button", { class: "chip", "aria-pressed": c === state.city, onclick: () => { state.city = c; render(); } }, c)));
+  $("cities").replaceChildren(...cities.map((c) => h("button", { class: "chip", "aria-pressed": c === state.city, onclick: () => { state.city = c; state.cinema = "Todos"; render(); } }, c)));
+
+  // Chips de cine: solo los de la ciudad elegida; se ocultan si hay uno solo (no hay nada que filtrar).
+  const cines = d.cinemas.filter((c) => state.city === "Todas" || c.city === state.city);
+  $("cinemas").hidden = cines.length < 2;
+  $("cinemas").replaceChildren(...[{ id: "Todos", name: "Todos los cines" }, ...cines].map((c) => h("button", { class: "chip", "aria-pressed": c.id === state.cinema, onclick: () => { state.cinema = c.id; render(); } }, c.name)));
 
   const days = [...new Set(shows.map((s) => s.date))].sort().slice(0, 8);
   if (!days.includes(state.day)) state.day = days[0] || null;
