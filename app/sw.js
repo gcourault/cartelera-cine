@@ -1,7 +1,7 @@
-const SHELL = "cartelera-shell-v1", IMGS = "cartelera-img-v1";
+const SHELL = "cartelera-shell-v2", IMGS = "cartelera-img-v1";
 const FILES = ["./", "index.html", "style.css", "app.js", "manifest.webmanifest", "icons/icon-192.png"];
 self.addEventListener("install", (e) => { e.waitUntil(caches.open(SHELL).then((c) => c.addAll(FILES))); self.skipWaiting(); });
-self.addEventListener("activate", (e) => { e.waitUntil(clients.claim()); });
+self.addEventListener("activate", (e) => { e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k.startsWith("cartelera-shell-") && k !== SHELL).map((k) => caches.delete(k)))).then(() => clients.claim())); });
 self.addEventListener("fetch", (e) => {
   const u = new URL(e.request.url);
   if (e.request.method !== "GET") return;
