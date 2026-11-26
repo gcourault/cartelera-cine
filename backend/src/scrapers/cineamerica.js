@@ -14,6 +14,11 @@ const pageText = (html) => {
   return $.root().text().replace(/ /g, " ").split("\n").map((s) => s.trim()).filter(Boolean);
 };
 
+// Prefijo de una línea de horarios, sin acentos: "jueves:", "martes y miercoles:". Exige nombres de día para
+// no confundirlo con títulos con dos puntos ("HECHIZO: BIENVENIDOS A HEXE").
+const DAY = `(?:${DAYS.map(noAccent).join("|")})`;
+const DAY_PREFIX = new RegExp(`^${DAY}(?:(?: y |, ?)${DAY})*\\s*:`);
+
 // "Horarios del 19 al 25 de noviembre de 2026:" -> { "jueves": "2026-11-19", ... }
 function weekMap(lines) {
   const l = lines.find((x) => /^Horarios del/i.test(x));
@@ -39,7 +44,7 @@ export function parse(lines) {
     // "de Andrey Zvyagintsev, Francia, Letonia, 2026, 135m." -> la línea anterior era el título
     if (/^de .+,.*\d{2,3}m\.?$/i.test(line)) continue;
     // Líneas de días: "Jueves: 20:15hs. - Viernes: 18:00hs." o "Martes y miércoles: 17:45 y 22:00hs."
-    const dayParts = line.split(/\s+-\s+/).filter((p) => /^[A-Za-zÁÉÍÓÚáéíóú]+( y [A-Za-zÁÉÍÓÚáéíóú]+)?:/.test(p));
+    const dayParts = line.split(/\s+-\s+/).filter((p) => DAY_PREFIX.test(noAccent(p)));
     if (dayParts.length && title) {
       for (const part of dayParts) {
         const [days, times] = part.split(/:(.+)/s);
@@ -49,7 +54,7 @@ export function parse(lines) {
       }
       continue;
     }
-    // Línea de título: casi todo en mayúsculas, sin ":" de horario
+    // Línea de título: casi todo en mayúsculas
     if (/[A-ZÁÉÍÓÚÑ]{3}/.test(line) && line === line.toUpperCase() && !/^(ESTRENO|\d+(ra|da|era|ta)? SEMANA)/i.test(line)) {
       // Los rótulos de ciclo ("TEMPORADA 74 CINE CLUB", "ORGULLOSA CICLO DE CINE QUEER") preceden al título real;
       // el título es la última línea en mayúsculas antes de "de <director>".
